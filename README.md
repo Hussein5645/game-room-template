@@ -13,7 +13,8 @@ This project is a web game template built with HTML, JavaScript, and Firebase. I
 
 - `index.html`: This file serves as the landing page where players can create or join game rooms.
 - `room.html`: After joining a room, players are redirected to this page, where they can choose teams and start the game.
-- `config.js`: This file contains the Firebase configuration and initialization code.
+- `game.html`: Create it for your game logic
+- `config.js`: This file contains the Firebase configuration and initialization code.(you should create it in host directory)
 
 ## Getting Started
 
