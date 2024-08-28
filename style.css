@@ -1,0 +1,184 @@
+/* General Body Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f2f2f2;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: #333333;
+}
+
+/* Container Styles */
+.container {
+    text-align: center;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    width: 400px;
+    max-width: 100%;
+}
+
+/* General Button Styles */
+.button {
+    padding: 12px 24px;
+    margin: 10px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: #ffffff;
+    border-radius: 5px;
+    font-size: 1em;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.button:hover {
+    background-color: #7caee2;
+    transform: translateY(-2px);
+}
+
+.button:active {
+    background-color: #003366;
+    transform: translateY(1px);
+}
+
+.button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.5);
+}
+
+/* Heading Styles */
+h1 {
+    margin-bottom: 20px;
+    font-size: 2em;
+    color: #333333;
+}
+
+/* Room ID Display Styles */
+#roomIdDisplay {
+    margin-bottom: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #ff0000;
+}
+
+/* Team Status Section */
+#teamStatus {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.team {
+    background-color: #00cc66;
+    padding: 15px;
+    border-radius: 8px;
+    width: 48%;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.team h2 {
+    margin-top: 0;
+    color: #333333;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.team ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.team li {
+    background-color: #00994d;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #ffffff;
+    font-size: 0.9em;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.team li button {
+    background-color: #ff0000;
+    border: none;
+    padding: 5px 10px;
+    color: #ffffff;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.8em;
+}
+
+.team li button:hover {
+    background-color: #cc0000;
+}
+
+/* Team Selection Section */
+.team-selection button {
+    padding: 12px 24px;
+    margin: 10px 0;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: #ffffff;
+    border-radius: 5px;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.team-selection button:hover {
+    background-color: #0056b3;
+}
+
+/* Creator Options Section */
+#creatorOptions button {
+    padding: 12px 24px;
+    margin: 10px;
+    cursor: pointer;
+    border: none;
+    background-color: #ff6600;
+    color: #ffffff;
+    border-radius: 5px;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+#creatorOptions button:hover {
+    background-color: #cc5200;
+}
+
+/* Input Field Styles */
+input {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #cccccc;
+    width: calc(100% - 22px);
+    box-sizing: border-box;
+    font-size: 1em;
+    color: #333333;
+}
+
+input::placeholder {
+    color: #999999;
+}
+
+/* Responsive Design */
+@media (max-width: 400px) {
+    #teamStatus {
+        flex-direction: column;
+    }
+
+    .team {
+        width: 100%;
+    }
+}

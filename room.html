@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Room</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Game Room</h1>
+            <div id="roomInfo">
+                <p>Room ID: <span id="roomId"></span></p>
+                <p>Player UID: <span id="playerUid"></span></p>
+            </div>
+        </header>
+
+        <section id="nicknameSection">
+            <input type="text" id="nicknameInput" placeholder="Enter your name"maxlength="8">
+            <button id="setNicknameButton" onclick="setNickname()">Set name</button>
+        </section>
+
+        <section id="playerNicknames">
+            <h2>Players</h2>
+            <div id="playerNicknamesList"></div>
+        </section>
+
+        <section class="team-selection">
+            <button id="team1Button" onclick="selectTeam('team1')">Join Team 1</button>
+            <button id="team2Button" onclick="selectTeam('team2')">Join Team 2</button>
+        </section>
+
+        <section id="teamStatus">
+            
+            <div id="teamStatusContent"></div>
+        </section>
+
+        <section id="playerControls">
+            <button id="readyButton" onclick="toggleReady()">Ready</button>
+        </section>
+
+        <section class="admin-controls" style="display: none;">
+            <label for="maxPointsDropdown">Max Points:</label>
+            <select id="maxPointsDropdown">
+                <option value="100">100 Points</option>
+                <option value="200">200 Points</option>
+                <option value="500">500 Points</option>
+                <option value="1000">1000 Points</option>
+                <option value="1500">1500 Points</option>
+            </select>
+            <button id="startGameButton" onclick="startGame()">Start Game</button>
+            <button onclick="deleteRoom()">Delete Room</button>
+        </section>
+        
+        <section>
+            <button>2</button>
+        </section>        
+        
+    </div>
+
+    <script>
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+    
+        let roomId = new URLSearchParams(window.location.search).get('roomId');
+        let playerUid;
+        let isCreator = false;
+    
+        function initialize() {
+            if (!roomId) {
+                console.error('Room ID not provided.');
+                return;
+            }
+    
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    playerUid = user.uid;
+                    document.getElementById('playerUid').textContent = playerUid;
+                    checkIfCreator();
+                    updateRoomInfo();
+                    monitorRoomDeletion();
+                } else {
+                    console.error('User not authenticated.');
+                }
+            });
+        }
+    
+        function setNickname() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            if (nickname === '') {
+                alert('Please enter a nickname.');
+                return;
+            }
+    
+            const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+            playerRef.update({ nickname: nickname }).then(() => {
+                document.getElementById('nicknameInput').value = '';
+            });
+        }
+    
+        function updateRoomInfo() {
+    const roomRef = database.ref('rooms/' + roomId);
+
+    roomRef.on('value', (snapshot) => {
+        const roomData = snapshot.val();
+        if (roomData) {
+            if (roomData.game) {
+                redirectToGamePage();  // Always call redirectToGamePage to check for gameStarted
+                return; // Ensure no further processing if game has started
+            }
+            
+            document.getElementById('roomId').textContent = roomId;
+            updatePlayerNicknames(roomData.players);
+            updateTeamStatus(roomData);
+            updateReadyStatus(roomData);
+            toggleReadyButtonVisibility(roomData);
+        }
+    });
+}
+function updatePlayerNicknames(players) {
+    const playerNicknames = document.getElementById('playerNicknamesList');
+    playerNicknames.innerHTML = '';
+
+    // Create containers for team1 and team2
+    const team1Container = document.createElement('div');
+    team1Container.style.display = 'inline-block';
+    team1Container.style.width = '45%';
+    team1Container.style.marginRight = '5%';
+    team1Container.style.verticalAlign = 'top';
+
+    const team2Container = document.createElement('div');
+    team2Container.style.display = 'inline-block';
+    team2Container.style.width = '45%';
+    team2Container.style.verticalAlign = 'top';
+
+    // Add headers to both containers
+    const createTableHeader = (bgColor) => {
+        const table = document.createElement('table');
+        table.style.borderCollapse = 'collapse';
+
+        const headerRow = document.createElement('tr');
+        const headers = ['Player', 'Status'];
+        headers.forEach(headerText => {
+            const header = document.createElement('th');
+            header.textContent = headerText;
+            header.style.border = '1px solid black';
+            header.style.padding = '8px';
+            header.style.backgroundColor = bgColor; // Add background color to header
+            headerRow.appendChild(header);
+        });
+
+        table.appendChild(headerRow);
+        return table;
+    }
+
+    const team1Table = createTableHeader('#ff4c4c'); // Red background for team1 header
+    const team2Table = createTableHeader('#4c4cff'); // Blue background for team2 header
+
+    // Append the tables to their respective containers
+    team1Container.appendChild(team1Table);
+    team2Container.appendChild(team2Table);
+
+    // Populate the tables with player data
+    for (const uid in players) {
+        const player = players[uid];
+        const nickname = player.nickname || 'Guest';
+        const readyStatus = player.ready ? 'Ready' : 'unReady';
+
+        const row = document.createElement('tr');
+
+        [nickname, readyStatus].forEach(text => {
+            const cell = document.createElement('td');
+            cell.textContent = text;
+            cell.style.border = '1px solid black';
+            cell.style.borderRadius = '12px'; // Add border-radius
+            cell.style.padding = '8px';
+            row.appendChild(cell);
+        });
+
+        // Append the row to the correct team's table
+        if (player.team === 'team1') {
+            team1Table.appendChild(row);
+        } else if (player.team === 'team2') {
+            team2Table.appendChild(row);
+        }
+    }
+
+    // Append the containers to the main container
+    playerNicknames.appendChild(team1Container);
+    playerNicknames.appendChild(team2Container);
+}
+
+        function updateTeamStatus(roomData) {
+            let team1Count = roomData.team1 ? roomData.team1.length : 0;
+            let team2Count = roomData.team2 ? roomData.team2.length : 0;
+    
+            const teamStatus = document.getElementById('teamStatusContent');
+            teamStatus.innerHTML = `
+
+              <p> ${team1Count >= 1 && team2Count >= 1 && team1Count === team2Count ? 'Teams are ready to start!' : 'Waiting for players...'}</p>
+
+            `;
+    
+            if (isCreator) {
+                document.querySelector('.admin-controls').style.display = 'block';
+                checkAllPlayersReady(roomData);
+            } else {
+                document.querySelector('.admin-controls').style.display = 'none';
+            }
+        }
+    
+        function updateReadyStatus(roomData) {
+            if (playerUid) {
+                const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+                playerRef.once('value').then((snapshot) => {
+                    const playerData = snapshot.val();
+                    const readyButton = document.getElementById('readyButton');
+                    readyButton.textContent = playerData && playerData.ready ? 'Unready' : 'Ready';
+                });
+            }
+        }
+    
+        function toggleReadyButtonVisibility(roomData) {
+            const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+            playerRef.once('value').then((snapshot) => {
+                const playerData = snapshot.val();
+                const readyButton = document.getElementById('readyButton');
+                if (playerData && playerData.ready) {
+                    //readyButton.style.display = 'inline-block';
+                    document.getElementById('team1Button').style.display = 'none';
+                    document.getElementById('team2Button').style.display = 'none';
+                    document.getElementById('nicknameSection').style.display = 'none';
+                } else {
+                    //readyButton.style.display = 'none';
+                    document.getElementById('team1Button').style.display = 'inline-block';
+                    document.getElementById('team2Button').style.display = 'inline-block';
+                    document.getElementById('nicknameSection').style.display = 'inline-block';
+                }
+            });
+        }
+    
+        function toggleReady() {
+            const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+            playerRef.once('value').then((snapshot) => {
+                const playerData = snapshot.val();
+                const isReady = playerData && playerData.ready;
+                playerRef.update({ ready: !isReady });
+            });
+        }
+    
+        function checkAllPlayersReady(roomData) {
+            let allReady = true;
+            for (const uid in roomData.players) {
+                if (!roomData.players[uid].ready) {
+                    allReady = false;
+                    break;
+                }
+            }
+            document.getElementById('startGameButton').disabled = !allReady || roomData.team1.length < 1|| roomData.team2.length < 1/*|| roomData.team1.length != roomData.team2.length*/  ;
+
+        }
+    
+        function selectTeam(team) {
+            const roomRef = database.ref('rooms/' + roomId);
+    
+            roomRef.once('value').then((snapshot) => {
+                const roomData = snapshot.val();
+                let currentTeam = roomData.team1 && roomData.team1.includes(playerUid) ? 'team1' : (roomData.team2 && roomData.team2.includes(playerUid) ? 'team2' : null);
+    
+                if (currentTeam) {
+                    const currentTeamRef = database.ref('rooms/' + roomId + '/' + currentTeam);
+                    currentTeamRef.once('value').then((teamSnapshot) => {
+                        let players = teamSnapshot.val() || [];
+                        players = players.filter(uid => uid !== playerUid);
+                        currentTeamRef.set(players);
+                    });
+                }
+    
+                const newTeamRef = database.ref('rooms/' + roomId + '/' + team);
+                newTeamRef.once('value').then((teamSnapshot) => {
+                    let players = teamSnapshot.val() || [];
+                    if (!players.includes(playerUid)) {
+                        players.push(playerUid);
+                        newTeamRef.set(players);
+                    }
+                });
+    
+                const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+                playerRef.update({ team: team });
+            });
+        }
+    
+        function checkIfCreator() {
+            const roomRef = database.ref('rooms/' + roomId);
+            roomRef.once('value').then((snapshot) => {
+                const roomData = snapshot.val();
+                if (roomData && roomData.creator === playerUid) {
+                    isCreator = true;
+                }
+            });
+        }
+    
+        function startGame() {
+    const roomRef = database.ref('rooms/' + roomId);
+    
+    // Get the selected max points value from the dropdown
+    const maxPoints = document.getElementById('maxPointsDropdown').value;
+
+    roomRef.update({ game: true });
+    roomRef.update({ maxPoints: maxPoints });
+}
+
+
+    function redirectToGamePage() {
+
+       
+        window.location.href = `game.html?roomId=${roomId}`;
+    }
+
+
+    
+        function deleteRoom() {
+            const roomRef = database.ref('rooms/' + roomId);
+            roomRef.remove().then(() => {
+                alert('Room deleted successfully.');
+                window.location.href = 'index.html';
+            }).catch((error) => {
+                console.error('Error deleting room:', error);
+            });
+        }
+    
+        function monitorRoomDeletion() {
+            const roomRef = database.ref('rooms/' + roomId);
+            roomRef.on('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    alert('The room has been deleted.');
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+    
+        initialize();
+    </script>
+    
+</body>
+</html>

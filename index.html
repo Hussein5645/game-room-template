@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Lobby</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Firebase non-ESM versions -->
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth-compat.js"></script>
+    <script src="config.js"></script>
+   <!--<script src="puzzles.js"></script> --> 
+</head>
+
+<body>
+    <div class="container">
+        <h1>Game Lobby</h1>
+        <div class="menu">
+            <button class="button" onclick="createRoom()">Create Room</button>
+            <input type="text" id="roomId" placeholder="Enter Room ID">
+            <button class="button" onclick="joinRoom()">Join Room</button>
+            <button >5</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+    
+        function signInAnonymously() {
+            return auth.signInAnonymously().then((userCredential) => {
+                // Print the user info or any other message on successful sign-in
+                console.log('Signed in anonymously with UID:', userCredential.user.uid);
+                return userCredential;
+            }).catch((error) => {
+                console.error('Error signing in anonymously:', error);
+                throw error;  // Re-throw the error to be handled by the caller
+            });
+        }
+    
+        function generateRoomId(length) {
+            const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let roomId = '';
+            for (let i = 0; i < length; i++) {
+                roomId += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return roomId;
+        }
+    
+        function createRoom() {
+            const roomId = generateRoomId(5);
+            const roomRef = database.ref('rooms/' + roomId);
+
+            roomRef.get().then((snapshot) => {
+                if (!snapshot.exists()) {
+                    // Room does not exist, create it
+                    roomRef.set({
+                        createdAt: firebase.database.ServerValue.TIMESTAMP,
+                        creator: firebase.auth().currentUser.uid // Store the creator's UID
+                    }).then(() => {
+                        window.location.href = `room.html?roomId=${roomId}`;
+                    }).catch((error) => {
+                        console.error("Error creating room: ", error);
+                });
+                } else {
+                    // Room already exists, handle accordingly
+                    console.error("Room already exists. Generating a new room ID.");
+                    createRoom();  // Recursive call to try again
+                }
+            }).catch((error) => {
+                console.error("Error checking room existence: ", error);
+            });
+        }
+
+        function joinRoom() {
+    const roomId = document.getElementById('roomId').value.trim();
+    if (roomId) {
+        signInAnonymously().then(() => {
+            // Check if the room exists in the database
+            database.ref('rooms/' + roomId).get().then((snapshot) => {
+                if (snapshot.exists()) {
+                    const roomData = snapshot.val();
+                    if (roomData.gameStarted) {
+                        // Check if the user is already in the room
+                        const playerUid = firebase.auth().currentUser.uid;
+                        const playerRef = database.ref('rooms/' + roomId + '/players/' + playerUid);
+                        playerRef.get().then((playerSnapshot) => {
+                            if (playerSnapshot.exists()) {
+                                // If the player is already in the room, allow re-entry
+                                console.log('Re-entering room with ID:', roomId);
+                                window.location.href = `room.html?roomId=${roomId}`;
+                            } else {
+                                // Otherwise, block new players
+                                alert('The game has already started. New players cannot join.');
+                            }
+                        }).catch((error) => {
+                            console.error("Error checking player status: ", error);
+                        });
+                    } else {
+                        // If room exists and game has not started, allow joining
+                        console.log('Joining room with ID:', roomId);
+                        window.location.href = `room.html?roomId=${roomId}`;
+                    }
+                } else {
+                    alert('Room ID does not exist. Please enter a valid Room ID.');
+                }
+            }).catch((error) => {
+                console.error("Error checking room ID: ", error);
+            });
+        }).catch((error) => {
+            console.error("Error signing in: ", error);
+        });
+    } else {
+        alert('Please enter a Room ID');
+    }
+}
+
+    </script>
+    
+</body>
+</html>
